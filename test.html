@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Figuritas Trade Matcher — Tests</title>
+<style>
+  body { margin:0; padding:1.25rem; background:#0f1620; color:#e6edf3;
+         font:15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  h1 { font-size:1.2rem; }
+  #summary { font-weight:600; margin:.5rem 0 1rem; }
+  ul { list-style:none; padding:0; margin:0; }
+  li { padding:.35rem .6rem; border-radius:6px; margin-bottom:.35rem;
+       font:13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  li.pass { background:#0e2a18; color:#7ee2a8; }
+  li.fail { background:#341417; color:#ff9a9a; }
+  .pass-tag { color:#43c777; } .fail-tag { color:#ff6b6b; }
+</style>
+</head>
+<body>
+  <h1>Figuritas Trade Matcher — Tests</h1>
+  <div id="summary">Running…</div>
+  <ul id="results"></ul>
+
+  <script src="app.js"></script>
+  <script src="fixtures.js"></script>
+  <script>
+  (function () {
+    var results = document.getElementById('results');
+    var passed = 0, failed = 0;
+
+    function record(name, ok, detail) {
+      var li = document.createElement('li');
+      li.className = ok ? 'pass' : 'fail';
+      li.innerHTML = (ok ? '<span class="pass-tag">PASS</span> ' : '<span class="fail-tag">FAIL</span> ')
+        + name + (ok ? '' : '  —  ' + detail);
+      results.appendChild(li);
+      ok ? passed++ : failed++;
+    }
+    function test(name, fn) {
+      try { fn(); record(name, true); }
+      catch (e) { record(name, false, e.message); }
+    }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+    function eqJSON(a, b, msg) {
+      var sa = JSON.stringify(a), sb = JSON.stringify(b);
+      if (sa !== sb) throw new Error((msg || 'not equal') + ': got ' + sa + ' expected ' + sb);
+    }
+    function nums(map, code) {
+      var g = map.get(code);
+      return g ? Array.from(g.numbers).sort(function (a, b) { return a - b; }) : null;
+    }
+
+    var A = {
+      missing: FH.parseList(FIXTURES.personA_faltantes),
+      repeated: FH.parseList(FIXTURES.personA_repetidas)
+    };
+    var B = {
+      missing: FH.parseList(FIXTURES.personB_faltantes),
+      repeated: FH.parseList(FIXTURES.personB_repetidas)
+    };
+
+    // --- Parser ---
+    test('FWC icon lines merge into one group (1-19 sequence)', function () {
+      eqJSON(nums(A.missing, 'FWC'), [4, 5, 6, 7, 10, 12, 17]);
+    });
+    test('Two-letter code CC parses', function () {
+      eqJSON(nums(A.missing, 'CC'), [1, 2, 4, 5, 6, 7, 10, 11, 14]);
+    });
+    test('Multi-codepoint flags (SCO, ENG) parse', function () {
+      assert(A.missing.has('SCO') && A.missing.has('ENG'), 'SCO/ENG missing');
+      eqJSON(nums(A.missing, 'SCO'), [1, 5, 6, 11, 16, 18, 19]);
+    });
+    test('Header/footer lines are ignored', function () {
+      assert(!A.missing.has('Figurinhas'), 'header leaked');
+      assert(!A.missing.has('https'), 'footer URL leaked');
+      assert(!A.missing.has('Baixe'), 'footer leaked');
+    });
+    test('Emoji captured for display', function () {
+      assert(A.missing.get('MEX').emoji === '🇲🇽', 'MEX emoji not captured');
+    });
+
+    // --- Matching ---
+    var trades = FH.computeTrades(A, B);
+    test('A gives B = A.repeated ∩ B.missing', function () {
+      // A.repeated MEX {9,16} ∩ B.missing MEX {9,16}
+      eqJSON(nums(trades.aGivesToB, 'MEX'), [9, 16]);
+      // A.repeated RSA {2,4,8,19,20} ∩ B.missing RSA {1,2,3,4,8,19,20}
+      eqJSON(nums(trades.aGivesToB, 'RSA'), [2, 4, 8, 19, 20]);
+      // A.repeated TUR {5,6,10,11,12,15,16,17} ∩ B.missing TUR {5,6}
+      eqJSON(nums(trades.aGivesToB, 'TUR'), [5, 6]);
+    });
+    test('B gives A = B.repeated ∩ A.missing', function () {
+      // B.repeated MEX {1,7} ∩ A.missing MEX {1,7,12,14,15,18}
+      eqJSON(nums(trades.bGivesToA, 'MEX'), [1, 7]);
+      // B.repeated RSA {5} ∩ A.missing RSA {1,2,3,7,9,14,18,19,20} -> none
+      assert(!trades.bGivesToA.has('RSA'), 'RSA should not be tradeable to A');
+    });
+
+    // --- Ordering ---
+    test('Sequential follows album order (MEX, RSA, TUR)', function () {
+      var ordered = FH.orderTrades(trades.aGivesToB, B.missing, 'sequential');
+      eqJSON(ordered.map(function (e) { return e.code; }), ['MEX', 'RSA', 'TUR']);
+    });
+    test('Completion floats completable countries first (MEX, TUR, RSA)', function () {
+      // After trade: MEX remaining 0, TUR remaining 0, RSA remaining 2.
+      // 0-remaining tie broken by album order -> MEX before TUR.
+      var ordered = FH.orderTrades(trades.aGivesToB, B.missing, 'completion');
+      eqJSON(ordered.map(function (e) { return e.code; }), ['MEX', 'TUR', 'RSA']);
+    });
+
+    // --- Formatting ---
+    test('formatList renders app-format lines', function () {
+      var ordered = FH.orderTrades(trades.aGivesToB, B.missing, 'sequential');
+      var out = FH.formatList(ordered);
+      assert(out.indexOf('MEX 🇲🇽: 9, 16') !== -1, 'MEX line malformed: ' + out);
+      assert(out.indexOf('TUR 🇹🇷: 5, 6') !== -1, 'TUR line malformed: ' + out);
+    });
+    test('formatList of empty trade is empty string', function () {
+      eqJSON(FH.formatList([]), '');
+    });
+
+    var summary = document.getElementById('summary');
+    summary.textContent = passed + ' passed, ' + failed + ' failed';
+    summary.style.color = failed ? '#ff6b6b' : '#43c777';
+  })();
+  </script>
+</body>
+</html>
