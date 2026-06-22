@@ -22,7 +22,8 @@
   fieldset { border:1px solid var(--line); border-radius:8px; margin:.75rem 0 0; padding:.5rem .75rem; }
   legend { font-size:.8rem; color:var(--muted); padding:0 .4rem; }
   fieldset label { display:inline-flex; align-items:center; gap:.35rem; margin:0 1rem 0 0; color:var(--fg); }
-  .actions { margin:1.25rem 0; display:flex; gap:.75rem; flex-wrap:wrap; }
+  .actions { margin:1.25rem 0; display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; }
+  .actions label.toggle { display:inline-flex; align-items:center; gap:.35rem; margin:0; color:var(--fg); }
   button { background:var(--accent); color:#fff; border:0; border-radius:8px;
            padding:.6rem 1.1rem; font-size:.95rem; cursor:pointer; }
   button.secondary { background:transparent; border:1px solid var(--line); color:var(--fg); }
@@ -53,6 +54,10 @@
         <label><input type="radio" name="aPref" value="sequential" checked> Sequential</label>
         <label><input type="radio" name="aPref" value="completion"> Completion</label>
       </fieldset>
+      <fieldset>
+        <legend>Repeats</legend>
+        <label><input type="checkbox" id="aAccepts"> Allow exchanging repeated stickers</label>
+      </fieldset>
     </section>
 
     <section class="card">
@@ -66,11 +71,16 @@
         <label><input type="radio" name="bPref" value="sequential" checked> Sequential</label>
         <label><input type="radio" name="bPref" value="completion"> Completion</label>
       </fieldset>
+      <fieldset>
+        <legend>Repeats</legend>
+        <label><input type="checkbox" id="bAccepts"> Allow exchanging repeated stickers</label>
+      </fieldset>
     </section>
   </div>
 
   <div class="actions">
     <button id="compare">Compare</button>
+    <label class="toggle"><input type="checkbox" id="even"> Even matching</label>
     <button id="sample" class="secondary" type="button">Load sample data</button>
   </div>
 
@@ -104,7 +114,11 @@
       function compare() {
         var personA = { missing: FH.parseList($('aMiss').value), repeated: FH.parseList($('aRep').value) };
         var personB = { missing: FH.parseList($('bMiss').value), repeated: FH.parseList($('bRep').value) };
-        var trades = FH.computeTrades(personA, personB);
+        var trades = FH.computeTrades(personA, personB, {
+          even: $('even').checked,
+          aAccepts: $('aAccepts').checked,
+          bAccepts: $('bAccepts').checked
+        });
 
         // Person B receives "give these to B" -> B's preference orders it.
         var ab = FH.orderTrades(trades.aGivesToB, personB.missing, pref('bPref'));
