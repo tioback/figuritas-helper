@@ -24,6 +24,7 @@
 
   <script src="app.js"></script>
   <script src="fixtures.js"></script>
+  <script src="i18n.js"></script>
   <script>
   (function () {
     var results = document.getElementById('results');
@@ -173,6 +174,34 @@
       var ordered = FH.orderTrades(t.bGivesToA, IA.missing, 'completion');
       var fwc = ordered.filter(function (e) { return e.code === 'FWC'; })[0];
       eqJSON(fwc.numbers, [1, 2, 3, 4]);
+    });
+
+    // --- i18n ---
+    test('Every language table has the same keys as English', function () {
+      var enKeys = Object.keys(I18N.STRINGS.en).sort();
+      Object.keys(I18N.STRINGS).forEach(function (lang) {
+        eqJSON(Object.keys(I18N.STRINGS[lang]).sort(), enKeys, lang + ' key set differs');
+      });
+    });
+    test('t() returns the active language string and falls back', function () {
+      I18N.setLang('pt-BR');
+      eqJSON(I18N.t('btnCompare'), 'Comparar', 'pt-BR string');
+      I18N.setLang('xx');                       // unknown -> defaults to en
+      eqJSON(I18N.getLang(), 'en', 'unknown lang should fall back to en');
+      eqJSON(I18N.t('btnCompare'), 'Compare', 'en string');
+      eqJSON(I18N.t('no_such_key'), 'no_such_key', 'unknown key returns raw key');
+    });
+    test('plural() picks singular for 1 and plural otherwise', function () {
+      I18N.setLang('en');
+      eqJSON(I18N.plural('stickers', 1), 'sticker', 'en one');
+      eqJSON(I18N.plural('stickers', 3), 'stickers', 'en other');
+      I18N.setLang('pt-BR');
+      eqJSON(I18N.plural('stickers', 1), 'figurinha', 'pt one');
+      eqJSON(I18N.plural('stickers', 2), 'figurinhas', 'pt other');
+      I18N.setLang('es');
+      eqJSON(I18N.plural('stickers', 1), 'figurita', 'es one');
+      eqJSON(I18N.plural('stickers', 2), 'figuritas', 'es other');
+      I18N.setLang('en');                       // leave runner in a clean state
     });
 
     var summary = document.getElementById('summary');
