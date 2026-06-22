@@ -31,10 +31,10 @@ var I18N = (function () {
       phRepeatedB: 'Figurinhas App - Lista\nRepetidas\n…',
       orderByA: 'Order stickers A receives by',
       orderByB: 'Order stickers B receives by',
-      optSequential: 'Sequential',
-      optCompletion: 'Completion',
+      optSequential: 'Album Sequence',
+      optCompletion: 'Closest to Completion',
       repeats: 'Repeats',
-      allowRepeats: 'Allow exchanging repeated stickers',
+      allowRepeats: 'Accept exchanging repeated stickers',
       btnCompare: 'Compare',
       evenMatching: 'Even matching',
       btnSample: 'Load sample data',
@@ -46,8 +46,8 @@ var I18N = (function () {
       stickers: { one: 'sticker', other: 'stickers' }
     },
     'pt-BR': {
-      title: 'Figuritas Trade Matcher',
-      heading: 'Figuritas Trade Matcher',
+      title: 'Auxiliar de Troca de Figurinhas',
+      heading: 'Auxiliar de Troca de Figurinhas',
       subtitle: 'Cole as listas de <strong>Faltantes</strong> e <strong>Repetidas</strong> de cada pessoa. ' +
                 'A ferramenta descobre quais repetidas cada uma deve passar para a outra.',
       personA: 'Pessoa A',
@@ -60,10 +60,10 @@ var I18N = (function () {
       phRepeatedB: 'Figurinhas App - Lista\nRepetidas\n…',
       orderByA: 'Ordenar figurinhas que A recebe por',
       orderByB: 'Ordenar figurinhas que B recebe por',
-      optSequential: 'Sequencial',
-      optCompletion: 'Conclusão',
+      optSequential: 'Sequência do Álbum',
+      optCompletion: 'Mais Perto de Completar',
       repeats: 'Repetidas',
-      allowRepeats: 'Permitir troca de figurinhas repetidas',
+      allowRepeats: 'Aceitar troca de figurinhas repetidas',
       btnCompare: 'Comparar',
       evenMatching: 'Troca equilibrada',
       btnSample: 'Carregar dados de exemplo',
@@ -89,10 +89,10 @@ var I18N = (function () {
       phRepeatedB: 'Figurinhas App - Lista\nRepetidas\n…',
       orderByA: 'Ordenar las figuritas que recibe A por',
       orderByB: 'Ordenar las figuritas que recibe B por',
-      optSequential: 'Secuencial',
-      optCompletion: 'Compleción',
+      optSequential: 'Secuencia del Album',
+      optCompletion: 'Más cerca de Compleción',
       repeats: 'Repetidas',
-      allowRepeats: 'Permitir intercambio de figuritas repetidas',
+      allowRepeats: 'Aceptar intercambio de figuritas repetidas',
       btnCompare: 'Comparar',
       evenMatching: 'Intercambio equilibrado',
       btnSample: 'Cargar datos de ejemplo',
@@ -106,7 +106,7 @@ var I18N = (function () {
   };
 
   var STORAGE_KEY = 'fh_lang';
-  var DEFAULT_LANG = 'en';
+  var DEFAULT_LANG = 'pt-BR';
   var current = DEFAULT_LANG;
 
   function has(code) {
