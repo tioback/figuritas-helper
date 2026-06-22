@@ -139,9 +139,11 @@
 
   <footer data-i18n="footer">Static page — no data leaves your browser. Source: app.js. Run the tests by opening test.html.</footer>
 
-  <script src="app.js"></script>
-  <script src="fixtures.js"></script>
-  <script src="i18n.js"></script>
+  <!-- ?v= cache-buster: bump when app.js / fixtures.js / i18n.js change so a
+       freshly deployed index.html never loads a stale cached script. -->
+  <script src="app.js?v=2"></script>
+  <script src="fixtures.js?v=2"></script>
+  <script src="i18n.js?v=2"></script>
   <script>
     (function () {
       var $ = function (id) { return document.getElementById(id); };
