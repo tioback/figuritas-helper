@@ -74,9 +74,15 @@
   <div class="people">
     <section class="card">
       <h2 data-i18n="personA">Person A</h2>
-      <label for="aMiss" data-i18n="labelMissing">Faltantes (missing)</label>
+      <div class="field-head">
+        <label for="aMiss" data-i18n="labelMissing">Faltantes (missing)</label>
+        <button type="button" class="secondary clear" data-target="aMiss" data-i18n="btnClear">Clear</button>
+      </div>
       <textarea id="aMiss" spellcheck="false" data-i18n-placeholder="phMissingA" placeholder="Figurinhas App - Lista&#10;Faltantes&#10;MEX 🇲🇽: 1, 7, 12 …"></textarea>
-      <label for="aRep" data-i18n="labelRepeated">Repetidas (repeated)</label>
+      <div class="field-head">
+        <label for="aRep" data-i18n="labelRepeated">Repetidas (repeated)</label>
+        <button type="button" class="secondary clear" data-target="aRep" data-i18n="btnClear">Clear</button>
+      </div>
       <textarea id="aRep" spellcheck="false" data-i18n-placeholder="phRepeatedA" placeholder="Figurinhas App - Lista&#10;Repetidas&#10;MEX 🇲🇽: 9, 16 …"></textarea>
       <fieldset>
         <legend data-i18n="orderByA">Order stickers A receives by</legend>
@@ -91,9 +97,15 @@
 
     <section class="card">
       <h2 data-i18n="personB">Person B</h2>
-      <label for="bMiss" data-i18n="labelMissing">Faltantes (missing)</label>
+      <div class="field-head">
+        <label for="bMiss" data-i18n="labelMissing">Faltantes (missing)</label>
+        <button type="button" class="secondary clear" data-target="bMiss" data-i18n="btnClear">Clear</button>
+      </div>
       <textarea id="bMiss" spellcheck="false" data-i18n-placeholder="phMissingB" placeholder="Figurinhas App - Lista&#10;Faltantes&#10;…"></textarea>
-      <label for="bRep" data-i18n="labelRepeated">Repetidas (repeated)</label>
+      <div class="field-head">
+        <label for="bRep" data-i18n="labelRepeated">Repetidas (repeated)</label>
+        <button type="button" class="secondary clear" data-target="bRep" data-i18n="btnClear">Clear</button>
+      </div>
       <textarea id="bRep" spellcheck="false" data-i18n-placeholder="phRepeatedB" placeholder="Figurinhas App - Lista&#10;Repetidas&#10;…"></textarea>
       <fieldset>
         <legend data-i18n="orderByB">Order stickers B receives by</legend>
@@ -109,8 +121,9 @@
 
   <div class="actions">
     <button id="compare" data-i18n="btnCompare">Compare</button>
-    <label class="toggle"><input type="checkbox" id="even"> <span data-i18n="evenMatching">Even matching</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipEven">?</span></label>
+    <label class="toggle"><input type="checkbox" id="even" checked> <span data-i18n="evenMatching">Even matching</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipEven">?</span></label>
     <button id="sample" class="secondary" type="button" data-i18n="btnSample">Load sample data</button>
+    <button id="reset" class="secondary" type="button" data-i18n="btnReset">Reset</button>
   </div>
 
   <div class="results">
@@ -171,6 +184,29 @@
         $('bMiss').value = FIXTURES.personB_faltantes;
         $('bRep').value = FIXTURES.personB_repetidas;
         compare();
+      });
+
+      // Per-field clear: empties only the textarea named in data-target.
+      var clears = document.querySelectorAll('button.clear');
+      for (var c = 0; c < clears.length; c++) {
+        clears[c].addEventListener('click', function () {
+          var ta = $(this.getAttribute('data-target'));
+          if (ta) { ta.value = ''; ta.focus(); }
+        });
+      }
+
+      // Reset the form to defaults: empty inputs, sequential ordering, no
+      // accepted repeats, even matching back on, and cleared results. Leaves
+      // the language preference untouched.
+      $('reset').addEventListener('click', function () {
+        $('aMiss').value = $('aRep').value = $('bMiss').value = $('bRep').value = '';
+        $('aAccepts').checked = $('bAccepts').checked = false;
+        $('even').checked = true;
+        document.querySelector('input[name="aPref"][value="sequential"]').checked = true;
+        document.querySelector('input[name="bPref"][value="sequential"]').checked = true;
+        $('abOut').textContent = $('baOut').textContent = '';
+        $('abCount').textContent = $('baCount').textContent = '';
+        hasCompared = false;
       });
 
       // Language: detect (saved choice or browser), localize the page, and
