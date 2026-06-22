@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Figuritas Trade Matcher</title>
+<style>
+  :root { --bg:#0f1620; --card:#172230; --line:#2a3950; --fg:#e6edf3; --muted:#9fb0c3; --accent:#4f9cff; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:1.25rem; background:var(--bg); color:var(--fg);
+         font:15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  h1 { font-size:1.3rem; margin:0 0 .25rem; }
+  p.sub { margin:0 0 1.25rem; color:var(--muted); }
+  .people { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  @media (max-width:760px){ .people { grid-template-columns:1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:1rem; }
+  .card h2 { font-size:1.05rem; margin:0 0 .75rem; }
+  label { display:block; font-size:.82rem; color:var(--muted); margin:.6rem 0 .25rem; }
+  textarea { width:100%; height:150px; resize:vertical; background:#0c121b; color:var(--fg);
+             border:1px solid var(--line); border-radius:8px; padding:.5rem .6rem;
+             font:13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  fieldset { border:1px solid var(--line); border-radius:8px; margin:.75rem 0 0; padding:.5rem .75rem; }
+  legend { font-size:.8rem; color:var(--muted); padding:0 .4rem; }
+  fieldset label { display:inline-flex; align-items:center; gap:.35rem; margin:0 1rem 0 0; color:var(--fg); }
+  .actions { margin:1.25rem 0; display:flex; gap:.75rem; flex-wrap:wrap; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px;
+           padding:.6rem 1.1rem; font-size:.95rem; cursor:pointer; }
+  button.secondary { background:transparent; border:1px solid var(--line); color:var(--fg); }
+  .results { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  @media (max-width:760px){ .results { grid-template-columns:1fr; } }
+  .results h2 { font-size:1.05rem; margin:0 0 .5rem; }
+  pre { background:#0c121b; border:1px solid var(--line); border-radius:8px; padding:.75rem;
+        min-height:120px; white-space:pre-wrap; word-break:break-word; margin:0; }
+  .count { color:var(--muted); font-size:.8rem; font-weight:normal; }
+  footer { margin-top:1.5rem; color:var(--muted); font-size:.8rem; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+  <h1>Figuritas Trade Matcher</h1>
+  <p class="sub">Paste each person's <strong>Faltantes</strong> and <strong>Repetidas</strong> exports.
+     The tool finds which repeats each one should hand to the other.</p>
+
+  <div class="people">
+    <section class="card">
+      <h2>Person A</h2>
+      <label for="aMiss">Faltantes (missing)</label>
+      <textarea id="aMiss" spellcheck="false" placeholder="Figurinhas App - Lista&#10;Faltantes&#10;MEX 🇲🇽: 1, 7, 12 …"></textarea>
+      <label for="aRep">Repetidas (repeated)</label>
+      <textarea id="aRep" spellcheck="false" placeholder="Figurinhas App - Lista&#10;Repetidas&#10;MEX 🇲🇽: 9, 16 …"></textarea>
+      <fieldset>
+        <legend>Order stickers A receives by</legend>
+        <label><input type="radio" name="aPref" value="sequential" checked> Sequential</label>
+        <label><input type="radio" name="aPref" value="completion"> Completion</label>
+      </fieldset>
+    </section>
+
+    <section class="card">
+      <h2>Person B</h2>
+      <label for="bMiss">Faltantes (missing)</label>
+      <textarea id="bMiss" spellcheck="false" placeholder="Figurinhas App - Lista&#10;Faltantes&#10;…"></textarea>
+      <label for="bRep">Repetidas (repeated)</label>
+      <textarea id="bRep" spellcheck="false" placeholder="Figurinhas App - Lista&#10;Repetidas&#10;…"></textarea>
+      <fieldset>
+        <legend>Order stickers B receives by</legend>
+        <label><input type="radio" name="bPref" value="sequential" checked> Sequential</label>
+        <label><input type="radio" name="bPref" value="completion"> Completion</label>
+      </fieldset>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button id="compare">Compare</button>
+    <button id="sample" class="secondary" type="button">Load sample data</button>
+  </div>
+
+  <div class="results">
+    <section>
+      <h2>Give these to B <span class="count" id="abCount"></span></h2>
+      <pre id="abOut"></pre>
+    </section>
+    <section>
+      <h2>Give these to A <span class="count" id="baCount"></span></h2>
+      <pre id="baOut"></pre>
+    </section>
+  </div>
+
+  <footer>Static page — no data leaves your browser. Source: app.js. Run the tests by opening test.html.</footer>
+
+  <script src="app.js"></script>
+  <script src="fixtures.js"></script>
+  <script>
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      function pref(name) {
+        var el = document.querySelector('input[name="' + name + '"]:checked');
+        return el ? el.value : 'sequential';
+      }
+      function count(arr) {
+        var n = arr.reduce(function (s, e) { return s + e.numbers.length; }, 0);
+        return n ? '(' + n + ' sticker' + (n === 1 ? '' : 's') + ')' : '';
+      }
+
+      function compare() {
+        var personA = { missing: FH.parseList($('aMiss').value), repeated: FH.parseList($('aRep').value) };
+        var personB = { missing: FH.parseList($('bMiss').value), repeated: FH.parseList($('bRep').value) };
+        var trades = FH.computeTrades(personA, personB);
+
+        // Person B receives "give these to B" -> B's preference orders it.
+        var ab = FH.orderTrades(trades.aGivesToB, personB.missing, pref('bPref'));
+        var ba = FH.orderTrades(trades.bGivesToA, personA.missing, pref('aPref'));
+
+        $('abOut').textContent = FH.formatList(ab) || 'Nothing to trade.';
+        $('baOut').textContent = FH.formatList(ba) || 'Nothing to trade.';
+        $('abCount').textContent = count(ab);
+        $('baCount').textContent = count(ba);
+      }
+
+      $('compare').addEventListener('click', compare);
+      $('sample').addEventListener('click', function () {
+        if (typeof FIXTURES === 'undefined') return;
+        $('aMiss').value = FIXTURES.personA_faltantes;
+        $('aRep').value = FIXTURES.personA_repetidas;
+        $('bMiss').value = FIXTURES.personB_faltantes;
+        $('bRep').value = FIXTURES.personB_repetidas;
+        compare();
+      });
+    })();
+  </script>
+</body>
+</html>
