@@ -120,6 +120,61 @@
       eqJSON(FH.formatList([]), '');
     });
 
+    // --- Even matching + repeat toggles (issue #2) ---
+    // Inline fixtures from the issue's worked example.
+    var IA = {
+      missing: FH.parseList('FWC 🏆: 1, 2\nCAN: 1, 2'),
+      repeated: FH.parseList('BRA: 1, 2, 3, 4')
+    };
+    var IB = {
+      missing: FH.parseList('BRA: 1, 2, 3, 4'),
+      repeated: FH.parseList('FWC 🏆: 1, 2, 3, 4')
+    };
+    function scenario(opts) {
+      var t = FH.computeTrades(IA, IB, opts);
+      return { aGives: nums(t.aGivesToB, 'BRA'), bGives: nums(t.bGivesToA, 'FWC') };
+    }
+
+    test('Case 1 — TX off: full repeats each way', function () {
+      var s = scenario({});
+      eqJSON(s.aGives, [1, 2, 3, 4], 'A gives');
+      eqJSON(s.bGives, [1, 2], 'B gives');
+    });
+    test('Case 2 — TX on, no accepts: even at min (2 each)', function () {
+      var s = scenario({ even: true });
+      eqJSON(s.aGives, [1, 2], 'A gives');
+      eqJSON(s.bGives, [1, 2], 'B gives');
+    });
+    test('Case 3 — TX + TA: A accepts repeats, even at 4', function () {
+      var s = scenario({ even: true, aAccepts: true });
+      eqJSON(s.aGives, [1, 2, 3, 4], 'A gives');
+      eqJSON(s.bGives, [1, 2, 3, 4], 'B gives (tops up with own repeats)');
+    });
+    test('Case 4 — TX + TB: B accepts but B-side min still 2', function () {
+      var s = scenario({ even: true, bAccepts: true });
+      eqJSON(s.aGives, [1, 2], 'A gives');
+      eqJSON(s.bGives, [1, 2], 'B gives');
+    });
+    test('Case 5 — TX + TA + TB: both accept, even at 4', function () {
+      var s = scenario({ even: true, aAccepts: true, bAccepts: true });
+      eqJSON(s.aGives, [1, 2, 3, 4], 'A gives');
+      eqJSON(s.bGives, [1, 2, 3, 4], 'B gives');
+    });
+    test('No-opts call is unchanged (regression)', function () {
+      var bare = FH.computeTrades(A, B);
+      var off = FH.computeTrades(A, B, { even: false });
+      eqJSON(nums(bare.aGivesToB, 'RSA'), nums(off.aGivesToB, 'RSA'));
+      eqJSON(nums(bare.aGivesToB, 'TUR'), [5, 6]);
+    });
+    test('Completion ordering ignores repeat top-ups', function () {
+      // B receives FWC 1,2 (missing) + 3,4 (already owned). FWC was the only
+      // missing country for B here, so it stays completable (0 remaining).
+      var t = FH.computeTrades(IA, IB, { even: true, aAccepts: true });
+      var ordered = FH.orderTrades(t.bGivesToA, IA.missing, 'completion');
+      var fwc = ordered.filter(function (e) { return e.code === 'FWC'; })[0];
+      eqJSON(fwc.numbers, [1, 2, 3, 4]);
+    });
+
     var summary = document.getElementById('summary');
     summary.textContent = passed + ' passed, ' + failed + ' failed';
     summary.style.color = failed ? '#ff6b6b' : '#43c777';

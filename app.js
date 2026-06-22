@@ -94,14 +94,90 @@ var FH = (function () {
   }
 
   /**
+   * Split a giver's repeated stickers against a receiver's missing map into two
+   * ordered lists of { code, emoji, numbers:number[] } in album order:
+   *   useful — the receiver is missing these (giver.repeated ∩ receiver.missing)
+   *   extra  — repeats the receiver already owns (giver.repeated \ receiver.missing)
+   * Within each country numbers are ascending. `total` counts the stickers.
+   */
+  function splitRepeats(giverRepeated, receiverMissing) {
+    var useful = [], extra = [];
+    giverRepeated.forEach(function (group, code) {
+      var wanted = receiverMissing.get(code);
+      var u = [], e = [];
+      group.numbers.forEach(function (n) {
+        if (wanted && wanted.numbers.has(n)) u.push(n); else e.push(n);
+      });
+      var emoji = group.emoji || (wanted && wanted.emoji) || '';
+      if (u.length) useful.push({ code: code, emoji: emoji, numbers: u });
+      if (e.length) extra.push({ code: code, emoji: emoji, numbers: e });
+    });
+    function byAlbum(x, y) { return albumIndex(x.code) - albumIndex(y.code); }
+    function sortNums(list) {
+      list.forEach(function (g) { g.numbers.sort(function (a, b) { return a - b; }); });
+      list.sort(byAlbum);
+    }
+    sortNums(useful); sortNums(extra);
+    return {
+      useful: useful,
+      extra: extra,
+      usefulCount: useful.reduce(function (s, g) { return s + g.numbers.length; }, 0),
+      extraCount: extra.reduce(function (s, g) { return s + g.numbers.length; }, 0)
+    };
+  }
+
+  // Build a trade Map (code -> { emoji, numbers:Set }) by taking up to `limit`
+  // stickers, useful (receiver's missing) first then extra repeats, preserving
+  // album order. limit === null means take everything useful only.
+  function buildTrade(split, limit) {
+    var out = new Map();
+    var remaining = (limit === null) ? Infinity : limit;
+    function take(list) {
+      list.forEach(function (g) {
+        if (remaining <= 0) return;
+        var picked = (g.numbers.length <= remaining) ? g.numbers : g.numbers.slice(0, remaining);
+        if (!picked.length) return;
+        remaining -= picked.length;
+        var entry = out.get(g.code);
+        if (!entry) { entry = { emoji: g.emoji, numbers: new Set() }; out.set(g.code, entry); }
+        picked.forEach(function (n) { entry.numbers.add(n); });
+      });
+    }
+    take(split.useful);
+    if (limit !== null) take(split.extra);
+    return out;
+  }
+
+  /**
    * Compute both trade directions.
    * personA / personB: { missing:Map, repeated:Map } (from parseList).
+   * opts (optional): { even, aAccepts, bAccepts } — all default false.
+   *   even      — limit both directions to the same count (the minimum either
+   *               person can give the other).
+   *   aAccepts  — Person A accepts receiving repeated stickers, so B may give A
+   *               more than A is missing (raising the even-match minimum).
+   *   bAccepts  — Person B accepts receiving repeated stickers (symmetric).
    * Returns { aGivesToB, bGivesToA } as Maps (code -> { emoji, numbers:Set }).
    */
-  function computeTrades(personA, personB) {
+  function computeTrades(personA, personB, opts) {
+    opts = opts || {};
+    if (!opts.even) {
+      // Default behaviour: each gives every repeat the other is missing.
+      return {
+        aGivesToB: intersect(personA.repeated, personB.missing),
+        bGivesToA: intersect(personB.repeated, personA.missing)
+      };
+    }
+    var aToB = splitRepeats(personA.repeated, personB.missing);
+    var bToA = splitRepeats(personB.repeated, personA.missing);
+    // Capacity = useful only, unless the receiver accepts repeats (then the
+    // giver may also hand over its remaining repeats = its full repeated count).
+    var capAB = opts.bAccepts ? aToB.usefulCount + aToB.extraCount : aToB.usefulCount;
+    var capBA = opts.aAccepts ? bToA.usefulCount + bToA.extraCount : bToA.usefulCount;
+    var target = Math.min(capAB, capBA);
     return {
-      aGivesToB: intersect(personA.repeated, personB.missing),
-      bGivesToA: intersect(personB.repeated, personA.missing)
+      aGivesToB: buildTrade(aToB, target),
+      bGivesToA: buildTrade(bToA, target)
     };
   }
 
@@ -141,9 +217,12 @@ var FH = (function () {
 
   function remainingAfterTrade(entry, recipientMissing) {
     var miss = recipientMissing && recipientMissing.get(entry.code);
-    var missingCount = miss ? miss.numbers.size : entry.numbers.length;
-    // Traded stickers are a subset of what the recipient is missing.
-    return missingCount - entry.numbers.length;
+    if (!miss) return 0; // recipient already had the whole country.
+    // Only count traded numbers the recipient was actually missing; repeat
+    // top-ups (numbers the recipient already owns) reduce nothing.
+    var filled = 0;
+    entry.numbers.forEach(function (n) { if (miss.numbers.has(n)) filled++; });
+    return miss.numbers.size - filled;
   }
 
   // Render ordered trades back into the app's list format.

@@ -16,10 +16,26 @@ file or drop it on GitHub Pages.
    - **Sequential** — in album order, numbers ascending.
    - **Completion** — countries the person is closest to finishing first
      (a trade that completes a country floats to the top).
-4. Click **Compare**. The two result panes — *Give these to B* and
+4. Optionally enable **Allow exchanging repeated stickers** under a person — see
+   *Even matching* below.
+5. Click **Compare**. The two result panes — *Give these to B* and
    *Give these to A* — are in the same app list format, ready to copy/share.
 
 Use **Load sample data** to populate the inputs with the bundled example.
+
+## Even matching
+
+By default each person hands over **every** repeat the other is missing, so a
+trade can be lopsided (one person gives 4, the other 2). Tick **Even matching**
+(next to *Compare*) to cap both sides to the **same** count — the smaller of
+what either person can give.
+
+Each person also has an **Allow exchanging repeated stickers** toggle. Enabling
+it means that person accepts receiving stickers they already own, which lets the
+other person give more and so raises the even-match count. When topping up like
+this, stickers the receiver is **missing** are always handed over first, and
+only then the giver's remaining duplicates. With Even matching off these toggles
+have no effect.
 
 ## How the input is read
 
