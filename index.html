@@ -39,6 +39,22 @@
   .count { color:var(--muted); font-size:.8rem; font-weight:normal; }
   footer { margin-top:1.5rem; color:var(--muted); font-size:.8rem; }
   a { color:var(--accent); }
+  .field-head { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+  .field-head label { margin:.6rem 0 .25rem; }
+  button.clear { padding:.15rem .5rem; font-size:.75rem; border-radius:6px; }
+  .help { position:relative; display:inline-flex; align-items:center; justify-content:center;
+          width:1.05rem; height:1.05rem; margin-left:.3rem; border-radius:50%;
+          border:1px solid var(--line); color:var(--muted); background:#0c121b;
+          font-size:.72rem; font-weight:600; cursor:help; flex:none; }
+  .help:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .help::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + .4rem);
+                 transform:translateX(-50%); width:max-content; max-width:230px;
+                 background:var(--card); color:var(--fg); border:1px solid var(--line);
+                 border-radius:8px; padding:.45rem .6rem; font-size:.78rem; font-weight:normal;
+                 line-height:1.35; text-align:left; white-space:normal; z-index:5;
+                 opacity:0; visibility:hidden; transition:opacity .12s ease;
+                 box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  .help:hover::after, .help:focus::after { opacity:1; visibility:visible; }
 </style>
 </head>
 <body>
@@ -58,43 +74,56 @@
   <div class="people">
     <section class="card">
       <h2 data-i18n="personA">Person A</h2>
-      <label for="aMiss" data-i18n="labelMissing">Faltantes (missing)</label>
+      <div class="field-head">
+        <label for="aMiss" data-i18n="labelMissing">Faltantes (missing)</label>
+        <button type="button" class="secondary clear" data-target="aMiss" data-i18n="btnClear">Clear</button>
+      </div>
       <textarea id="aMiss" spellcheck="false" data-i18n-placeholder="phMissingA" placeholder="Figurinhas App - Lista&#10;Faltantes&#10;MEX 🇲🇽: 1, 7, 12 …"></textarea>
-      <label for="aRep" data-i18n="labelRepeated">Repetidas (repeated)</label>
+      <div class="field-head">
+        <label for="aRep" data-i18n="labelRepeated">Repetidas (repeated)</label>
+        <button type="button" class="secondary clear" data-target="aRep" data-i18n="btnClear">Clear</button>
+      </div>
       <textarea id="aRep" spellcheck="false" data-i18n-placeholder="phRepeatedA" placeholder="Figurinhas App - Lista&#10;Repetidas&#10;MEX 🇲🇽: 9, 16 …"></textarea>
       <fieldset>
         <legend data-i18n="orderByA">Order stickers A receives by</legend>
-        <label><input type="radio" name="aPref" value="sequential" checked> <span data-i18n="optSequential">Sequential</span></label>
-        <label><input type="radio" name="aPref" value="completion"> <span data-i18n="optCompletion">Completion</span></label>
+        <label><input type="radio" name="aPref" value="sequential" checked> <span data-i18n="optSequential">Sequential</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipSequential">?</span></label>
+        <label><input type="radio" name="aPref" value="completion"> <span data-i18n="optCompletion">Completion</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipCompletion">?</span></label>
       </fieldset>
       <fieldset>
         <legend data-i18n="repeats">Repeats</legend>
-        <label><input type="checkbox" id="aAccepts"> <span data-i18n="allowRepeats">Allow exchanging repeated stickers</span></label>
+        <label><input type="checkbox" id="aAccepts"> <span data-i18n="allowRepeats">Allow exchanging repeated stickers</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipAllowRepeats">?</span></label>
       </fieldset>
     </section>
 
     <section class="card">
       <h2 data-i18n="personB">Person B</h2>
-      <label for="bMiss" data-i18n="labelMissing">Faltantes (missing)</label>
+      <div class="field-head">
+        <label for="bMiss" data-i18n="labelMissing">Faltantes (missing)</label>
+        <button type="button" class="secondary clear" data-target="bMiss" data-i18n="btnClear">Clear</button>
+      </div>
       <textarea id="bMiss" spellcheck="false" data-i18n-placeholder="phMissingB" placeholder="Figurinhas App - Lista&#10;Faltantes&#10;…"></textarea>
-      <label for="bRep" data-i18n="labelRepeated">Repetidas (repeated)</label>
+      <div class="field-head">
+        <label for="bRep" data-i18n="labelRepeated">Repetidas (repeated)</label>
+        <button type="button" class="secondary clear" data-target="bRep" data-i18n="btnClear">Clear</button>
+      </div>
       <textarea id="bRep" spellcheck="false" data-i18n-placeholder="phRepeatedB" placeholder="Figurinhas App - Lista&#10;Repetidas&#10;…"></textarea>
       <fieldset>
         <legend data-i18n="orderByB">Order stickers B receives by</legend>
-        <label><input type="radio" name="bPref" value="sequential" checked> <span data-i18n="optSequential">Sequential</span></label>
-        <label><input type="radio" name="bPref" value="completion"> <span data-i18n="optCompletion">Completion</span></label>
+        <label><input type="radio" name="bPref" value="sequential" checked> <span data-i18n="optSequential">Sequential</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipSequential">?</span></label>
+        <label><input type="radio" name="bPref" value="completion"> <span data-i18n="optCompletion">Completion</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipCompletion">?</span></label>
       </fieldset>
       <fieldset>
         <legend data-i18n="repeats">Repeats</legend>
-        <label><input type="checkbox" id="bAccepts"> <span data-i18n="allowRepeats">Allow exchanging repeated stickers</span></label>
+        <label><input type="checkbox" id="bAccepts"> <span data-i18n="allowRepeats">Allow exchanging repeated stickers</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipAllowRepeats">?</span></label>
       </fieldset>
     </section>
   </div>
 
   <div class="actions">
     <button id="compare" data-i18n="btnCompare">Compare</button>
-    <label class="toggle"><input type="checkbox" id="even"> <span data-i18n="evenMatching">Even matching</span></label>
+    <label class="toggle"><input type="checkbox" id="even" checked> <span data-i18n="evenMatching">Even matching</span><span class="help" tabindex="0" role="img" data-i18n-tip="tipEven">?</span></label>
     <button id="sample" class="secondary" type="button" data-i18n="btnSample">Load sample data</button>
+    <button id="reset" class="secondary" type="button" data-i18n="btnReset">Reset</button>
   </div>
 
   <div class="results">
@@ -155,6 +184,29 @@
         $('bMiss').value = FIXTURES.personB_faltantes;
         $('bRep').value = FIXTURES.personB_repetidas;
         compare();
+      });
+
+      // Per-field clear: empties only the textarea named in data-target.
+      var clears = document.querySelectorAll('button.clear');
+      for (var c = 0; c < clears.length; c++) {
+        clears[c].addEventListener('click', function () {
+          var ta = $(this.getAttribute('data-target'));
+          if (ta) { ta.value = ''; ta.focus(); }
+        });
+      }
+
+      // Reset the form to defaults: empty inputs, sequential ordering, no
+      // accepted repeats, even matching back on, and cleared results. Leaves
+      // the language preference untouched.
+      $('reset').addEventListener('click', function () {
+        $('aMiss').value = $('aRep').value = $('bMiss').value = $('bRep').value = '';
+        $('aAccepts').checked = $('bAccepts').checked = false;
+        $('even').checked = true;
+        document.querySelector('input[name="aPref"][value="sequential"]').checked = true;
+        document.querySelector('input[name="bPref"][value="sequential"]').checked = true;
+        $('abOut').textContent = $('baOut').textContent = '';
+        $('abCount').textContent = $('baCount').textContent = '';
+        hasCompared = false;
       });
 
       // Language: detect (saved choice or browser), localize the page, and

@@ -38,6 +38,12 @@ var I18N = (function () {
       btnCompare: 'Compare',
       evenMatching: 'Even matching',
       btnSample: 'Load sample data',
+      btnClear: 'Clear',
+      btnReset: 'Reset',
+      tipEven: 'Balances the trade so each person hands over the same number of stickers per country, capped at the smaller pile.',
+      tipAllowRepeats: 'Lets this person receive stickers they already have, used to top up an even trade.',
+      tipSequential: 'Lists the stickers this person receives in album (country) order.',
+      tipCompletion: 'Lists the stickers this person receives so countries closest to being completed come first.',
       giveToB: 'Give these to B',
       giveToA: 'Give these to A',
       footer: 'Static page — no data leaves your browser. Source: app.js. Run the tests by opening test.html.',
@@ -67,6 +73,12 @@ var I18N = (function () {
       btnCompare: 'Comparar',
       evenMatching: 'Troca equilibrada',
       btnSample: 'Carregar dados de exemplo',
+      btnClear: 'Limpar',
+      btnReset: 'Redefinir',
+      tipEven: 'Equilibra a troca para que cada pessoa entregue a mesma quantidade de figurinhas por país, limitado ao menor monte.',
+      tipAllowRepeats: 'Permite que esta pessoa receba figurinhas que já tem, usado para completar uma troca equilibrada.',
+      tipSequential: 'Lista as figurinhas que esta pessoa recebe na ordem do álbum (por país).',
+      tipCompletion: 'Lista as figurinhas que esta pessoa recebe colocando primeiro os países mais perto de completar.',
       giveToB: 'Dê estas para B',
       giveToA: 'Dê estas para A',
       footer: 'Página estática — nenhum dado sai do seu navegador. Fonte: app.js. Rode os testes abrindo test.html.',
@@ -96,6 +108,12 @@ var I18N = (function () {
       btnCompare: 'Comparar',
       evenMatching: 'Intercambio equilibrado',
       btnSample: 'Cargar datos de ejemplo',
+      btnClear: 'Limpiar',
+      btnReset: 'Restablecer',
+      tipEven: 'Equilibra el intercambio para que cada persona entregue la misma cantidad de figuritas por país, limitado al montón más pequeño.',
+      tipAllowRepeats: 'Permite que esta persona reciba figuritas que ya tiene, usado para completar un intercambio equilibrado.',
+      tipSequential: 'Lista las figuritas que esta persona recibe en el orden del álbum (por país).',
+      tipCompletion: 'Lista las figuritas que esta persona recibe poniendo primero los países más cerca de completarse.',
       giveToB: 'Dá estas a B',
       giveToA: 'Dá estas a A',
       footer: 'Página estática — ningún dato sale de tu navegador. Fuente: app.js. Corré las pruebas abriendo test.html.',
@@ -184,6 +202,16 @@ var I18N = (function () {
     for (i = 0; i < els.length; i++) {
       el = els[i];
       el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder')));
+    }
+
+    // Help tooltips: `data-tip` feeds the CSS bubble, `aria-label` the
+    // screen reader; both kept in sync with the active language.
+    els = root.querySelectorAll('[data-i18n-tip]');
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      var tip = t(el.getAttribute('data-i18n-tip'));
+      el.setAttribute('data-tip', tip);
+      el.setAttribute('aria-label', tip);
     }
 
     if (document && document.documentElement) document.documentElement.lang = current;
