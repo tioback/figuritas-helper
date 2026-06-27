@@ -72,6 +72,17 @@ Parsing notes that must be preserved:
 - Header lines (`Figurinhas App - Lista`, album name, `Faltantes`/`Repetidas`) and
   the `Baixe o app` footer naturally fail `LINE_RE` (no `code: numbers`) and are skipped.
 
+Inputs aren't always real app exports — people also type lists by hand, so the
+parser must tolerate that without extra flags:
+- The emoji is fully optional; `CODE: n, n` with no icon parses the same as an
+  exported line, just with `emoji: ''`.
+- Numbers are stored in a `Set`, so duplicates (within one line or across
+  repeated lines for the same code) silently collapse to one.
+- The code is `toUpperCase()`-d on read, so `mex`, `Mex`, and `MEX` all land in
+  the same group (and still sort correctly against the uppercase `ALBUM` data) —
+  this is also what makes a country split across several hand-typed lines merge
+  into one group regardless of how each occurrence was cased.
+
 ### The `ALBUM` table
 
 `ALBUM` in `app.js` is the source of truth, a list of `[code, lo, hi]` page ranges in

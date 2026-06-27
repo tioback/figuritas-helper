@@ -81,6 +81,35 @@
       assert(A.missing.get('MEX').emoji === '🇲🇽', 'MEX emoji not captured');
     });
 
+    // --- Manual entry: no icons, duplicate numbers, merged occurrences ---
+    test('Lines without an icon parse fine', function () {
+      var m = FH.parseList('MEX: 1, 7, 12');
+      eqJSON(nums(m, 'MEX'), [1, 7, 12]);
+      assert(m.get('MEX').emoji === '', 'expected no emoji');
+    });
+    test('Duplicate numbers within a line count as one', function () {
+      eqJSON(nums(FH.parseList('MEX: 1, 1, 7, 7, 12'), 'MEX'), [1, 7, 12]);
+    });
+    test('Duplicate numbers across repeated lines count as one', function () {
+      eqJSON(nums(FH.parseList('MEX: 1, 2\nMEX: 2, 3'), 'MEX'), [1, 2, 3]);
+    });
+    test('Multiple occurrences of the same country merge their stickers', function () {
+      var m = FH.parseList('MEX: 1, 2\nMEX: 3\nMEX: 4, 5');
+      eqJSON(nums(m, 'MEX'), [1, 2, 3, 4, 5]);
+    });
+    test('Country code casing is normalized so hand-typed entries still merge', function () {
+      var m = FH.parseList('MEX: 1, 2\nmex: 3, 4\nMex: 5');
+      eqJSON(Array.from(m.keys()), ['MEX'], 'expected a single merged MEX group');
+      eqJSON(nums(m, 'MEX'), [1, 2, 3, 4, 5]);
+    });
+    test('Lowercase-only code still sorts in correct album order', function () {
+      var ordered = FH.orderTrades(FH.computeTrades(
+        { missing: new Map(), repeated: FH.parseList('mex: 1\nfwc: 2') },
+        { missing: FH.parseList('MEX: 1\nFWC: 2'), repeated: new Map() }
+      ).aGivesToB, FH.parseList('MEX: 1\nFWC: 2'), 'sequential');
+      eqJSON(ordered.map(function (e) { return e.code; }), ['FWC', 'MEX']);
+    });
+
     // --- Matching ---
     var trades = FH.computeTrades(A, B);
     test('A gives B = A.repeated ∩ B.missing', function () {
