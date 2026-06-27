@@ -51,14 +51,20 @@ var FH = (function () {
   var LINE_RE = /^\s*(.+?):\s*(\d+(?:\s*,\s*\d+)*)\s*$/;
 
   /**
-   * Parse a Figuritas export into a Map: code -> { emoji, numbers:Set<number>,
-   * numberEmoji:Map<number,string> }. Lines that share a code (e.g. the FWC
-   * icons) are merged into one group, but the icon actually printed next to
-   * each number is kept per-number in `numberEmoji` — some codes (FWC) are
-   * exported across several lines with different page icons, and which icon
-   * is "first" depends only on incidental line order in the pasted text.
-   * `emoji` keeps the first non-empty icon seen as a last-resort fallback for
-   * numbers that never appear on an icon-bearing line.
+   * Parse a Figuritas export (or a manually typed list) into a Map:
+   * code -> { emoji, numbers:Set<number>, numberEmoji:Map<number,string> }.
+   * Codes are case-normalized (toUpperCase) so hand-typed lines like "mex: 1"
+   * still merge with "MEX: 2" into one group and still sort correctly against
+   * the (uppercase) ALBUM data. Lines that share a code (e.g. the FWC icons,
+   * or any country split across several pasted/typed lines) are merged into
+   * one group; numbers are a Set so duplicates collapse automatically, whether
+   * repeated within one line or across several. The icon actually printed
+   * next to each number is kept per-number in `numberEmoji` — some codes
+   * (FWC) are exported across several lines with different page icons, and
+   * which icon is "first" depends only on incidental line order in the pasted
+   * text. The emoji is entirely optional (manual entries may omit it); `emoji`
+   * keeps the first non-empty icon seen as a last-resort fallback for numbers
+   * that never appear on an icon-bearing line.
    */
   function parseList(text) {
     var map = new Map();
@@ -67,7 +73,7 @@ var FH = (function () {
       if (!m) return;
       var left = m[1].trim();
       var tokens = left.split(/\s+/);
-      var code = tokens[0];
+      var code = tokens[0].toUpperCase();
       var emoji = tokens.slice(1).join(' ');
       if (!map.has(code)) map.set(code, { emoji: emoji, numbers: new Set(), numberEmoji: new Map() });
       var group = map.get(code);
