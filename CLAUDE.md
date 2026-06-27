@@ -45,13 +45,24 @@ Four files at the repo root, plus `.agents/` (historical agent notes, ignore for
 
 ### Data model and the FWC/code-grouping rule
 
-`parseList(text)` returns a `Map: code -> { emoji, numbers: Set<number> }`.
+`parseList(text)` returns a `Map: code -> { emoji, numbers: Set<number>,
+numberEmoji: Map<number, string> }`.
 
 The single most important domain rule, baked into the parser and the `ALBUM` data:
 **stickers are grouped by their 3-letter (or 2-letter, e.g. `CC`) code only.** The
 app exports `FWC` across several lines with different page icons (🏆 / 🌎 / 📜), but
 they are **one group sharing a single number sequence (1–19)** — the parser merges
-all lines with the same code. The emoji is display-only (first one seen wins).
+all lines with the same code. Matching/ordering operate on the merged group, but
+the icon actually printed next to each *number* is tracked per-number in
+`numberEmoji`, not just once per code — this is what lets a trade re-expand into
+several correctly-iconned `CODE EMOJI: n, n, ...` lines (one per distinct icon
+among the traded numbers, ordered by each icon group's smallest number) instead of
+slapping one arbitrary icon on the whole merged group. `group.emoji` (first
+non-empty icon seen) only kicks in as a last-resort fallback for a number that was
+never seen on an icon-bearing line on either side of the trade. This keeps the
+rendered icon — and which numbers get grouped under which icon — independent of
+which lines were present or what order they appeared in across the four pasted
+lists; see `iconFor`/`splitByIcon` in `app.js`.
 
 Parsing notes that must be preserved:
 - Lines match `LINE_RE = /^\s*(.+?):\s*(\d+(?:\s*,\s*\d+)*)\s*$/`. The code is the
@@ -81,7 +92,9 @@ only — the derived structures rebuild automatically.
     *remaining missing count after the trade* (`remainingAfterTrade`; 0 = country
     gets completed → floats to top), tie-broken by album order.
 - `formatList` renders ordered trades back to `CODE EMOJI: n, n, ...` lines — the same
-  format as the input, so output is directly pasteable into the app.
+  format as the input, so output is directly pasteable into the app. A code whose
+  traded numbers carry more than one icon (FWC) expands into multiple lines, one
+  per icon, country block order is otherwise unaffected.
 
 Note the wiring in `index.html`: each result pane is ordered by the **recipient's**
 preference — "Give these to B" uses B's radio and B's `missing` map, and vice versa.
