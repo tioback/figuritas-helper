@@ -121,6 +121,30 @@
       eqJSON(FH.formatList([]), '');
     });
 
+    // --- Icons stay correct regardless of input order ---
+    test('Multi-icon code splits into one line per real page icon, in number order', function () {
+      var giver = { repeated: FH.parseList('FWC 🏆: 4\nFWC 🌎: 5, 6, 7\nFWC 📜: 10, 12, 17'), missing: new Map() };
+      var receiver = { repeated: new Map(), missing: FH.parseList('FWC: 4, 5, 6, 7, 10, 12, 17') };
+      var t = FH.computeTrades(giver, receiver);
+      var ordered = FH.orderTrades(t.aGivesToB, receiver.missing, 'sequential');
+      eqJSON(FH.formatList(ordered), 'FWC 🏆: 4\nFWC 🌎: 5, 6, 7\nFWC 📜: 10, 12, 17');
+    });
+    test('Icon assignment is independent of the order icon lines were pasted in', function () {
+      var shuffled = { repeated: FH.parseList('FWC 📜: 10, 12, 17\nFWC 🌎: 5, 6, 7\nFWC 🏆: 4'), missing: new Map() };
+      var inOrder = { repeated: FH.parseList('FWC 🏆: 4\nFWC 🌎: 5, 6, 7\nFWC 📜: 10, 12, 17'), missing: new Map() };
+      var receiver = { repeated: new Map(), missing: FH.parseList('FWC: 4, 5, 6, 7, 10, 12, 17') };
+      var fromShuffled = FH.formatList(FH.orderTrades(FH.computeTrades(shuffled, receiver).aGivesToB, receiver.missing, 'sequential'));
+      var fromInOrder = FH.formatList(FH.orderTrades(FH.computeTrades(inOrder, receiver).aGivesToB, receiver.missing, 'sequential'));
+      eqJSON(fromShuffled, fromInOrder, 'icon assignment depends on input line order');
+    });
+    test('Icon falls back to the other side when the giver did not record one', function () {
+      var giver = { repeated: FH.parseList('FWC: 4, 5'), missing: new Map() };
+      var receiver = { repeated: new Map(), missing: FH.parseList('FWC 🏆: 4, 5') };
+      var t = FH.computeTrades(giver, receiver);
+      var ordered = FH.orderTrades(t.aGivesToB, receiver.missing, 'sequential');
+      eqJSON(FH.formatList(ordered), 'FWC 🏆: 4, 5');
+    });
+
     // --- Even matching + repeat toggles (issue #2) ---
     // Inline fixtures from the issue's worked example.
     var IA = {

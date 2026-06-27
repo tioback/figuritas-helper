@@ -51,8 +51,14 @@ var FH = (function () {
   var LINE_RE = /^\s*(.+?):\s*(\d+(?:\s*,\s*\d+)*)\s*$/;
 
   /**
-   * Parse a Figuritas export into a Map: code -> { emoji, numbers:Set<number> }.
-   * Lines that share a code (e.g. the FWC icons) are merged into one group.
+   * Parse a Figuritas export into a Map: code -> { emoji, numbers:Set<number>,
+   * numberEmoji:Map<number,string> }. Lines that share a code (e.g. the FWC
+   * icons) are merged into one group, but the icon actually printed next to
+   * each number is kept per-number in `numberEmoji` — some codes (FWC) are
+   * exported across several lines with different page icons, and which icon
+   * is "first" depends only on incidental line order in the pasted text.
+   * `emoji` keeps the first non-empty icon seen as a last-resort fallback for
+   * numbers that never appear on an icon-bearing line.
    */
   function parseList(text) {
     var map = new Map();
@@ -63,39 +69,52 @@ var FH = (function () {
       var tokens = left.split(/\s+/);
       var code = tokens[0];
       var emoji = tokens.slice(1).join(' ');
-      if (!map.has(code)) map.set(code, { emoji: emoji, numbers: new Set() });
+      if (!map.has(code)) map.set(code, { emoji: emoji, numbers: new Set(), numberEmoji: new Map() });
       var group = map.get(code);
       if (!group.emoji && emoji) group.emoji = emoji;
       m[2].split(',').forEach(function (part) {
         var n = parseInt(part.trim(), 10);
-        if (!isNaN(n)) group.numbers.add(n);
+        if (isNaN(n)) return;
+        group.numbers.add(n);
+        if (emoji) group.numberEmoji.set(n, emoji);
       });
     });
     return map;
   }
 
+  // The icon to show for a specific number: prefer whichever side actually
+  // tagged that exact number with an icon (giver, then receiver), and only
+  // fall back to a group-level guess if neither did. This keeps the icon
+  // choice tied to the number itself rather than to input line order.
+  function iconFor(n, giver, receiver) {
+    return giver.numberEmoji.get(n) ||
+      (receiver && receiver.numberEmoji.get(n)) ||
+      giver.emoji || (receiver && receiver.emoji) || '';
+  }
+
   // Intersection of the giver's repeated stickers with the receiver's missing
-  // stickers, per country. Returns Map: code -> { emoji, numbers:Set }.
+  // stickers, per country. Returns Map: code -> { numbers:Set, numberEmoji:Map }.
   function intersect(giverRepeated, receiverMissing) {
     var out = new Map();
     giverRepeated.forEach(function (group, code) {
       var wanted = receiverMissing.get(code);
       if (!wanted) return;
       var numbers = new Set();
+      var numberEmoji = new Map();
       group.numbers.forEach(function (n) {
-        if (wanted.numbers.has(n)) numbers.add(n);
+        if (!wanted.numbers.has(n)) return;
+        numbers.add(n);
+        var icon = iconFor(n, group, wanted);
+        if (icon) numberEmoji.set(n, icon);
       });
-      if (numbers.size) {
-        var emoji = group.emoji || wanted.emoji || '';
-        out.set(code, { emoji: emoji, numbers: numbers });
-      }
+      if (numbers.size) out.set(code, { numbers: numbers, numberEmoji: numberEmoji });
     });
     return out;
   }
 
   /**
    * Split a giver's repeated stickers against a receiver's missing map into two
-   * ordered lists of { code, emoji, numbers:number[] } in album order:
+   * ordered lists of { code, numbers:number[], numberEmoji:Map } in album order:
    *   useful — the receiver is missing these (giver.repeated ∩ receiver.missing)
    *   extra  — repeats the receiver already owns (giver.repeated \ receiver.missing)
    * Within each country numbers are ascending. `total` counts the stickers.
@@ -105,12 +124,19 @@ var FH = (function () {
     giverRepeated.forEach(function (group, code) {
       var wanted = receiverMissing.get(code);
       var u = [], e = [];
+      var uIcons = new Map(), eIcons = new Map();
       group.numbers.forEach(function (n) {
-        if (wanted && wanted.numbers.has(n)) u.push(n); else e.push(n);
+        var icon = iconFor(n, group, wanted);
+        if (wanted && wanted.numbers.has(n)) {
+          u.push(n);
+          if (icon) uIcons.set(n, icon);
+        } else {
+          e.push(n);
+          if (icon) eIcons.set(n, icon);
+        }
       });
-      var emoji = group.emoji || (wanted && wanted.emoji) || '';
-      if (u.length) useful.push({ code: code, emoji: emoji, numbers: u });
-      if (e.length) extra.push({ code: code, emoji: emoji, numbers: e });
+      if (u.length) useful.push({ code: code, numbers: u, numberEmoji: uIcons });
+      if (e.length) extra.push({ code: code, numbers: e, numberEmoji: eIcons });
     });
     function byAlbum(x, y) { return albumIndex(x.code) - albumIndex(y.code); }
     function sortNums(list) {
@@ -126,9 +152,9 @@ var FH = (function () {
     };
   }
 
-  // Build a trade Map (code -> { emoji, numbers:Set }) by taking up to `limit`
-  // stickers, useful (receiver's missing) first then extra repeats, preserving
-  // album order. limit === null means take everything useful only.
+  // Build a trade Map (code -> { numbers:Set, numberEmoji:Map }) by taking up
+  // to `limit` stickers, useful (receiver's missing) first then extra repeats,
+  // preserving album order. limit === null means take everything useful only.
   function buildTrade(split, limit) {
     var out = new Map();
     var remaining = (limit === null) ? Infinity : limit;
@@ -139,8 +165,12 @@ var FH = (function () {
         if (!picked.length) return;
         remaining -= picked.length;
         var entry = out.get(g.code);
-        if (!entry) { entry = { emoji: g.emoji, numbers: new Set() }; out.set(g.code, entry); }
-        picked.forEach(function (n) { entry.numbers.add(n); });
+        if (!entry) { entry = { numbers: new Set(), numberEmoji: new Map() }; out.set(g.code, entry); }
+        picked.forEach(function (n) {
+          entry.numbers.add(n);
+          var icon = g.numberEmoji.get(n);
+          if (icon) entry.numberEmoji.set(n, icon);
+        });
       });
     }
     take(split.useful);
@@ -157,7 +187,7 @@ var FH = (function () {
    *   aAccepts  — Person A accepts receiving repeated stickers, so B may give A
    *               more than A is missing (raising the even-match minimum).
    *   bAccepts  — Person B accepts receiving repeated stickers (symmetric).
-   * Returns { aGivesToB, bGivesToA } as Maps (code -> { emoji, numbers:Set }).
+   * Returns { aGivesToB, bGivesToA } as Maps (code -> { numbers:Set, numberEmoji:Map }).
    */
   function computeTrades(personA, personB, opts) {
     opts = opts || {};
@@ -188,31 +218,57 @@ var FH = (function () {
    *   (fewest still-missing after the trade; 0 = country completed), tie-break
    *   by album order.
    * recipientMissing is the receiver's parsed `missing` Map (used by completion).
+   * Country block order never depends on icon assignment, but a single code can
+   * still expand into more than one output line (see splitByIcon) when its
+   * numbers were tagged with more than one icon.
    * Returns an array of { code, emoji, numbers:number[] }.
    */
   function orderTrades(tradeMap, recipientMissing, mode) {
-    var entries = [];
+    var codeEntries = [];
     tradeMap.forEach(function (group, code) {
-      entries.push({
+      codeEntries.push({
         code: code,
-        emoji: group.emoji || '',
-        numbers: Array.from(group.numbers).sort(function (a, b) { return a - b; })
+        numbers: Array.from(group.numbers).sort(function (a, b) { return a - b; }),
+        numberEmoji: group.numberEmoji
       });
     });
 
     if (mode === 'completion') {
-      entries.sort(function (x, y) {
+      codeEntries.sort(function (x, y) {
         var rx = remainingAfterTrade(x, recipientMissing);
         var ry = remainingAfterTrade(y, recipientMissing);
         if (rx !== ry) return rx - ry;
         return albumIndex(x.code) - albumIndex(y.code);
       });
     } else {
-      entries.sort(function (x, y) {
+      codeEntries.sort(function (x, y) {
         return albumIndex(x.code) - albumIndex(y.code);
       });
     }
-    return entries;
+
+    var lines = [];
+    codeEntries.forEach(function (ce) {
+      splitByIcon(ce).forEach(function (line) { lines.push(line); });
+    });
+    return lines;
+  }
+
+  // A code's numbers can carry more than one icon (FWC spans trophy/globe/
+  // scroll pages). Group its ascending numbers by the icon each was actually
+  // tagged with, so a country renders as one line per real page icon — output
+  // groups are ordered by their smallest number, independent of which side
+  // (giver/receiver) recorded the icon or what order its lines were pasted in.
+  function splitByIcon(codeEntry) {
+    var order = [];
+    var groups = new Map();
+    codeEntry.numbers.forEach(function (n) {
+      var icon = codeEntry.numberEmoji.get(n) || '';
+      if (!groups.has(icon)) { groups.set(icon, []); order.push(icon); }
+      groups.get(icon).push(n);
+    });
+    return order.map(function (icon) {
+      return { code: codeEntry.code, emoji: icon, numbers: groups.get(icon) };
+    });
   }
 
   function remainingAfterTrade(entry, recipientMissing) {
